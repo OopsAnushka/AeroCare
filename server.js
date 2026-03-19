@@ -1,5 +1,6 @@
 import express from 'express';
 import sosRouter from './routes/sos.js'; // Notice the .js extension here!
+import bloodRouter from './routes/blood.js';
 
 const app = express();
 const port = 3000;
@@ -14,6 +15,9 @@ app.get('/health', (req, res) => {
 
 // Mount the SOS dispatch route
 app.use('/api/sos', sosRouter);
+
+// Mount the blood request route
+app.use('/api/blood', bloodRouter);
 
 // Start the server
 app.listen(port, () => {
