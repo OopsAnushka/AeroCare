@@ -5,7 +5,7 @@ import SearchPanel     from "./components/SearchPanel";
 import AmbulanceStatus from "./components/AmbulanceStatus";
 import BottomNav       from "./components/BottomNav";
 import NearbyDrivers   from "./components/NearbyDriver";
-import RecentActivity  from "./components/Recent Activity";
+import RecentActivity  from "./components/RecentActivity";
 import HeroBanner      from "./components/HeroBanner";
 import StatsRow        from "./components/StatRow";
 import HospitalRouting from "./components/HospitalRouting";
