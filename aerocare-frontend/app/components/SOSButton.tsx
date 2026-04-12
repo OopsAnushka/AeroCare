@@ -57,13 +57,13 @@ const SOSButton = () => {
           ${isHolding ? "scale-110 border-red-400" : ""}
         `}
       >
-        {status === "idle" && (isHolding ? "HOLDING..." : "SOS")}
+        {status === "idle" && (isHolding ? "HOLDING..." : "")}
         {status === "sending" && "SENDING..."}
         {status === "sent" && "SENT!"}
       </button>
-      <p className="mt-4 text-gray-500 text-sm">
+      {/* <p className="mt-4 text-gray-500 text-sm">
         {status === "sent" ? "Help is on the way." : "Hold for 2 seconds to alert nearby responders."}
-      </p>
+      </p> */}
     </div>
   );
 };

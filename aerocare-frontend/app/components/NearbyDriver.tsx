@@ -9,25 +9,86 @@ const drivers = [
 
 export default function NearbyDrivers() {
   return (
+  
     <div className="drivers-section">
-      <p className="section-heading">Nearby Drivers</p>
-      <div className="drivers-strip">
-        {drivers.map((d) => (
-          <div key={d.name} className="driver-card">
-            <div className="driver-avatar-wrap">
-              <div className="driver-avatar">{d.emoji}</div>
-              <div>
-                <p className="driver-info-name">{d.name}</p>
-                <p className="driver-info-vehicle">{d.vehicle}</p>
-              </div>
-            </div>
-            <div className="driver-meta">
-              <span className="driver-rating">⭐ {d.rating}</span>
-              <span className="driver-eta-pill">{d.eta}</span>
-            </div>
-          </div>
-        ))}
+
+  <div className="section-heading">
+    Nearby Drivers
+  </div>
+
+  <div className="drivers-strip">
+
+    <div className="driver-card">
+      <div className="driver-row">
+        <div className="driver-avatar">🚑</div>
+
+        <div className="driver-info">
+          <div className="driver-info-name">Sheyas Iyer</div>
+          <div className="driver-info-vehicle">Ambulance • MP09 AB1234</div>
+        </div>
+
+        <div className="driver-eta-pill">3 min</div>
+      </div>
+
+      <div className="driver-meta">
+        <div className="driver-rating">⭐ 4.8</div>
+        <button className="driver-call">Call</button>
       </div>
     </div>
+
+    <div className="driver-card">
+      <div className="driver-row">
+        <div className="driver-avatar">🚑</div>
+
+        <div className="driver-info">
+          <div className="driver-info-name">Rohit Sharma</div>
+          <div className="driver-info-vehicle">ICU Van • MP09 XY7890</div>
+        </div>
+
+        <div className="driver-eta-pill">5 min</div>
+      </div>
+
+      <div className="driver-meta">
+        <div className="driver-rating">⭐ 4.6</div>
+        <button className="driver-call">Call</button>
+      </div>
+    </div>
+        <div className="driver-card">
+      <div className="driver-row">
+        <div className="driver-avatar">🚑</div>
+
+        <div className="driver-info">
+          <div className="driver-info-name">Virat Kohli</div>
+          <div className="driver-info-vehicle">ICU Van • MP09 XY9669</div>
+        </div>
+
+        <div className="driver-eta-pill">5 min</div>
+      </div>
+
+      <div className="driver-meta">
+        <div className="driver-rating">⭐ 4.8</div>
+        <button className="driver-call">Call</button>
+      </div>
+    </div>
+        <div className="driver-card">
+      <div className="driver-row">
+        <div className="driver-avatar">🚑</div>
+
+        <div className="driver-info">
+          <div className="driver-info-name">MS Dhoni</div>
+          <div className="driver-info-vehicle">ICU Van • MP09 XY5226</div>
+        </div>
+
+        <div className="driver-eta-pill">5 min</div>
+      </div>
+
+      <div className="driver-meta">
+        <div className="driver-rating">⭐ 4.9</div>
+        <button className="driver-call">Call</button>
+      </div>
+    </div>
+  </div>
+
+</div>
   );
 }

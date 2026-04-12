@@ -14,6 +14,7 @@ import BloodDonor from "./components/BloodDonor";
 import FirstAidGuide from "./components/FirstAidGuide";
 import MedicineLocate from "./components/MedicineLocate";
 import HealthRecords  from "./components/HealthRecords";
+import LocationPopup from "./components/Popup";
 const sidebarItems = [
   { icon: "🏠", label: "Home", active: true },
   { icon: "🚑", label: "Book Ambulance" },
@@ -48,7 +49,7 @@ const [showLocationInput, setShowLocationInput] = useState(false);
           </button>
 
           <span className="navbar-logo">
-            <span className="navbar-logo-heart">❤</span>
+            <span className="navbar-logo-heart">🚑</span>
             Aero<span>Care</span>
           </span>
         </div>
@@ -57,7 +58,7 @@ const [showLocationInput, setShowLocationInput] = useState(false);
              <div className="loc-bar">
         <div className="loc-bar-dot" />
        
-
+       <LocationPopup />
   {!showLocationInput ? (
     <>
       <p className="loc-bar-text">
@@ -181,7 +182,7 @@ const [showLocationInput, setShowLocationInput] = useState(false);
 
 {activeTab === "Live Tracking" && (
 <>
-  <HeroBanner />
+  <AmbulanceStatus status="arriving" />
 </>
 )}
 {activeTab === "Hospital Routing" && (
