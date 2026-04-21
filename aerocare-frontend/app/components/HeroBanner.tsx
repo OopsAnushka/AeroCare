@@ -3,25 +3,66 @@
 import { useState } from "react";
 
 export default function HeroBanner() {
+  const [active, setActive] = useState(false);
 
-  const [showAuth, setShowAuth] = useState(false);
+  const handleSOS = () => {
+    setActive(true);
+    alert("🚨 SOS Alert Sent! Nearest ambulance dispatched.");
+    setTimeout(() => setActive(false), 3000);
+  };
 
   return (
-    <div className="hero-banner">
-      <div className="hero-banner-text">
-        <span className="hero-banner-tag">LIVE · INDORE</span>
-        <h2 className="hero-banner-title">
-          Emergency Care,<br />Always On.
-        </h2>
-        <p className="hero-banner-sub">
-          24 ambulances active across Indore right now
+    <section className="hero-banner">
+      {/* LEFT SIDE */}
+      <div className="hero-left">
+        <span className="live-badge">🔴 LIVE • INDORE</span>
+
+        <h1 className="hero-title">
+          Emergency Care,
+          <br />
+          Always Ready.
+        </h1>
+
+        <p className="hero-subtitle">
+          24 ambulances active across Indore right now.
+          Tap SOS to dispatch the nearest unit instantly.
         </p>
+
+        <div className="stats-row">
+          <div className="stat-card">
+            <h3>24</h3>
+            <p>Active</p>
+          </div>
+
+          <div className="stat-card">
+            <h3>3.8m</h3>
+            <p>Avg Time</p>
+          </div>
+
+          <div className="stat-card">
+            <h3>98%</h3>
+            <p>Uptime</p>
+          </div>
+        </div>
       </div>
 
-      <div className="hero-banner-stat">
-        <span className="hero-banner-stat-num">3.8m</span>
-        <span className="hero-banner-stat-label">Avg response</span>
+      {/* RIGHT SIDE */}
+      <div className="hero-right">
+        <div className="ring ring1"></div>
+        <div className="ring ring2"></div>
+
+        <button
+          onClick={handleSOS}
+          className={`sos-btn ${active ? "active" : ""}`}
+        >
+          🚨
+          <span>SOS</span>
+        </button>
+
+        <p className="hint">
+          Instant Emergency Help
+        </p>
       </div>
-    </div>
+    </section>
   );
 }
