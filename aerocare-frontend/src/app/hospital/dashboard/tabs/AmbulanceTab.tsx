@@ -150,7 +150,7 @@ export default function AmbulanceTab({ hp, userId }: {
               return (
                 <div key={unit.id}
                   onClick={() => setSelected(isSelected ? null : unit)}
-                  className={`p-3 rounded-xl border cursor-pointer transition-all group ${isSelected ? 'border-blue-500/40 bg-blue-500/5' : 'border-white/5 bg-white/[0.02] hover:bg-white/5'}`}>
+                  className={`p-3 rounded-xl border cursor-pointer transition-all group ${isSelected ? 'border-blue-500/40 bg-blue-500/5' : 'border-white/5 bg-white/0.02 hover:bg-white/5'}`}>
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <span className={`w-2 h-2 rounded-full ${cfg.dot} ${unit.status === 'available' ? 'animate-pulse' : ''}`} />
@@ -212,7 +212,7 @@ export default function AmbulanceTab({ hp, userId }: {
           </div>
           <div className="flex gap-3">
             <button onClick={addUnit} disabled={saving}
-              className="flex-1 py-2.5 bg-gradient-to-r from-blue-500 to-cyan-600 text-white font-bold rounded-xl text-sm transition-all">
+              className="flex-1 py-2.5 bg-linear-to-r from-blue-500 to-cyan-600 text-white font-bold rounded-xl text-sm transition-all">
               {saving ? 'Registering…' : 'Register Unit'}
             </button>
             <button onClick={() => setAdding(false)} className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-gray-400 font-bold rounded-xl text-sm">Cancel</button>
