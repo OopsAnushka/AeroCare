@@ -278,7 +278,7 @@ export default function ProfileClient() {
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <InfoCard icon={BedDouble} title="Available ICU Beds" value={(profile as HospitalProfile).icuBeds || '0'} color="text-gray-900" bgColor="bg-white" iconColor="text-emerald-500" />
-                    <InfoCard icon={Ambulance} title="Ambulance Fleet" value={(profile as HospitalProfile).ambulances || '0'} color="text-gray-900" bgColor="bg-white" iconColor="text-emerald-500" />
+                    <InfoCard icon={Ambulance} title="Ambulance Fleet" value={((profile as HospitalProfile).ambulances?.length || 0).toString()} color="text-gray-900" bgColor="bg-white" iconColor="text-emerald-500" />
                   </div>
                   <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden p-5 flex flex-col gap-4">
                     <div className="flex justify-between items-center border-b border-gray-50 pb-4">
