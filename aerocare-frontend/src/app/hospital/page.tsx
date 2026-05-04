@@ -139,7 +139,7 @@ export default function HospitalAuthPage() {
           availableOTs: '0',
           ambulances: [],
           staff: [],
-        });
+        }as any);
 
         setSuccess('Facility registered! Setting up your dashboard...');
         await refreshProfile();
