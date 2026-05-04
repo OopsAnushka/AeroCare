@@ -7,7 +7,7 @@ import { fetchNearbyHospitals, fetchNearbyVolunteers } from '@/lib/api';
 
 const MapView = dynamic(() => import('@/components/MapView'), { ssr: false });
 
-export type TabId = 'dispatch' | 'radar' | 'hospitals' | 'blood' | 'cpr';
+export type TabId = 'dispatch' | 'hospitals' | 'blood' | 'cpr';
 
 export interface Volunteer {
   id: number; name: string; cert: string; distance: string; eta: string; pos: [number, number];

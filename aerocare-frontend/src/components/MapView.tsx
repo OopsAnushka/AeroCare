@@ -172,17 +172,7 @@ function MapView({
           </Marker>
         )}
 
-        {/* Volunteer markers */}
-        {activeTab === 'radar' &&
-          volunteers.map((v) => (
-            <Marker key={v.id} position={v.pos} icon={greenIcon}>
-              <Popup>
-                <strong>{v.name}</strong>
-                <br />
-                {v.cert}
-              </Popup>
-            </Marker>
-          ))}
+        {/* Removed volunteer markers section */}
 
         {/* Hospital markers */}
         {activeTab === 'hospitals' &&

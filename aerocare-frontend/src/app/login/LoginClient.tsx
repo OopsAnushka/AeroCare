@@ -4,10 +4,10 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   User, Droplet, Building2, ArrowRight,
-  Mail, Lock, Eye, EyeOff, UserCircle, AlertCircle, CheckCircle2
+  Mail, Lock, Eye, EyeOff, UserCircle, AlertCircle, CheckCircle2, MapPin
 } from 'lucide-react';
 import Image from 'next/image';
-import { auth } from '@/lib/firebase';
+import { auth, storage } from '@/lib/firebase';
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -15,24 +15,59 @@ import {
   signInWithPopup,
   sendPasswordResetEmail,
 } from 'firebase/auth';
-import { saveUserProfile } from '@/lib/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { saveUserProfile, createUserProfile } from '@/lib/firestore';
 import { useAuth } from '@/contexts/AuthContext';
 
-type RoleId = 'civilian' | 'donor' | 'hospital';
+type RoleId = 'civilian' | 'donor' | 'hospital' | 'ambulance_driver';
 
 const ROLES: { id: RoleId; icon: typeof User; label: string; desc: string; gradient: string }[] = [
   { id: 'civilian', icon: User, label: 'Civilian', desc: 'Request emergency help', gradient: 'from-blue-500 to-blue-600' },
-  { id: 'donor', icon: Droplet, label: 'Blood Donor', desc: 'Donate & save lives', gradient: 'from-rose-500 to-red-600' },
-  { id: 'hospital', icon: Building2, label: 'Hospital', desc: 'Register your facility', gradient: 'from-emerald-500 to-emerald-600' },
+  { id: 'ambulance_driver', icon: Building2, label: 'Ambulance Driver', desc: 'First responder unit', gradient: 'from-orange-500 to-orange-600' },
+  { id: 'donor', icon: Droplet, label: 'Blood Donor', desc: 'Donate & save lives', gradient: 'from-rose-500 to-red-600' }
 ];
 
-const Field = ({ id, label, icon: Icon, type = 'text', placeholder, required = true }: any) => (
+const INDIAN_STATES = [
+  'Andhra Pradesh','Arunachal Pradesh','Assam','Bihar','Chhattisgarh',
+  'Goa','Gujarat','Haryana','Himachal Pradesh','Jharkhand','Karnataka',
+  'Kerala','Madhya Pradesh','Maharashtra','Manipur','Meghalaya','Mizoram',
+  'Nagaland','Odisha','Punjab','Rajasthan','Sikkim','Tamil Nadu','Telangana',
+  'Tripura','Uttar Pradesh','Uttarakhand','West Bengal',
+  'Delhi','Jammu & Kashmir','Ladakh',
+];
+
+const CITY_MAP: Record<string, string[]> = {
+  'Madhya Pradesh': ['Indore','Bhopal','Gwalior','Ujjain','Jabalpur'],
+  'Maharashtra': ['Mumbai','Pune','Nagpur','Nashik','Aurangabad'],
+  'Delhi': ['New Delhi','Dwarka','Rohini','Lajpat Nagar'],
+  'Gujarat': ['Ahmedabad','Surat','Vadodara','Rajkot'],
+  'Rajasthan': ['Jaipur','Jodhpur','Udaipur','Kota'],
+  'Karnataka': ['Bengaluru','Mysuru','Hubli','Mangaluru'],
+  'Tamil Nadu': ['Chennai','Coimbatore','Madurai','Salem'],
+  'Uttar Pradesh': ['Lucknow','Kanpur','Varanasi','Agra','Noida'],
+  'West Bengal': ['Kolkata','Howrah','Durgapur','Siliguri'],
+  'Telangana': ['Hyderabad','Warangal','Karimnagar'],
+  'Kerala': ['Thiruvananthapuram','Kochi','Kozhikode','Thrissur'],
+};
+
+const Field = ({ id, label, icon: Icon, type = 'text', placeholder, required = true, options, value, onChange }: any) => (
   <div className="mb-3">
     <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 block">{label}</label>
     <div className="relative flex items-center rounded-2xl border-2 border-gray-100 bg-white transition-all duration-200 hover:border-gray-200 focus-within:border-red-500 focus-within:shadow-[0_0_0_3px_rgba(239,68,68,0.08)]">
       <Icon className="absolute left-3.5 w-[18px] h-[18px] text-gray-300" />
-      <input name={id} type={type} required={required} placeholder={placeholder}
-        className="w-full bg-transparent rounded-2xl px-4 py-3.5 pl-11 text-sm font-medium placeholder:text-gray-300 focus:outline-none" />
+      {type === 'select' ? (
+        <select name={id} required={required} 
+          {...(value !== undefined ? { value, onChange } : { defaultValue: "" })}
+          className="w-full bg-transparent rounded-2xl px-4 py-3.5 pl-11 text-sm font-medium text-gray-700 focus:outline-none appearance-none">
+          <option value="" disabled>{placeholder}</option>
+          {options?.map((opt: string) => <option key={opt} value={opt}>{opt}</option>)}
+        </select>
+      ) : type === 'file' ? (
+        <input name={id} type="file" accept="image/*" required={required} className="w-full bg-transparent rounded-2xl px-4 py-3.5 pl-11 text-sm font-medium text-gray-500 file:mr-4 file:py-1.5 file:px-4 file:rounded-full file:border-0 file:text-[10px] file:font-bold file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200 focus:outline-none cursor-pointer" />
+      ) : (
+        <input name={id} type={type} required={required} placeholder={placeholder}
+          className="w-full bg-transparent rounded-2xl px-4 py-3.5 pl-11 text-sm font-medium placeholder:text-gray-300 focus:outline-none" />
+      )}
     </div>
   </div>
 );
@@ -40,7 +75,7 @@ const Field = ({ id, label, icon: Icon, type = 'text', placeholder, required = t
 function LoginInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { refreshProfile } = useAuth();
+  const { refreshProfile, loading: authLoading } = useAuth();
   const formRef = useRef<HTMLFormElement>(null);
   
   const [isLogin, setIsLogin] = useState(true);
@@ -50,6 +85,8 @@ function LoginInner() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [resetSent, setResetSent] = useState(false);
+  const [selState, setSelState] = useState('');
+  const [selCity, setSelCity] = useState('');
 
   useEffect(() => {
     if (searchParams?.get('tab') === 'signup') {
@@ -68,7 +105,7 @@ function LoginInner() {
       'auth/too-many-requests': 'Too many attempts. Please wait and try again.',
       'auth/popup-closed-by-user': 'Sign-in popup was closed.',
     };
-    return map[code] || 'Something went wrong. Please try again.';
+    return map[code] || `Something went wrong: ${code || 'Unknown error'}`;
   };
 
   const submit = async (e: React.FormEvent) => {
@@ -86,29 +123,77 @@ function LoginInner() {
         await signInWithEmailAndPassword(auth, email, password);
         setSuccess('Logged in successfully!');
       } else {
-        const fullName = (form.elements.namedItem('full-name') as HTMLInputElement).value;
+        const fullName = (form.elements.namedItem('full-name') as HTMLInputElement)?.value || '';
+        const phone = (form.elements.namedItem('phone') as HTMLInputElement)?.value || '';
+        const city = (form.elements.namedItem('city') as HTMLInputElement)?.value || '';
+        const state = (form.elements.namedItem('state') as HTMLInputElement)?.value || '';
+        const pincode = (form.elements.namedItem('pincode') as HTMLInputElement)?.value || '';
+        const age = (form.elements.namedItem('age') as HTMLInputElement)?.value || '';
+
         const cred = await createUserWithEmailAndPassword(auth, email, password);
         
-        // Save basic profile, user will fill the rest in Edit Profile
-        await saveUserProfile(cred.user.uid, {
-          role,
-          ...(role === 'civilian'
-            ? { fullName, phone: '', dob: '', bloodType: '', allergies: '', medications: '', emergencyContactName: '', emergencyContactPhone: '', email }
-            : role === 'donor'
-            ? { fullName, phone: '', dob: '', bloodType: '', weight: '', lastDonation: '', conditions: '', address: '', email }
-            : { hospitalName: fullName, registrationNumber: '', phone: '', address: '', icuBeds: '', ambulances: '', contactPerson: '', contactRole: '', email }
-          ),
-        } as any);
+        let profileData: any = { role, city, state, email, fullName, phone, age };
+        
+        if (role === 'civilian') {
+          profileData = { ...profileData, pincode,
+            emergencyContactPhone: (form.elements.namedItem('emergency-contact') as HTMLInputElement)?.value || '',
+            medicalHistory: (form.elements.namedItem('medical-history') as HTMLInputElement)?.value || '',
+            currentMedicine: (form.elements.namedItem('current-medicine') as HTMLInputElement)?.value || ''
+          };
+        } else if (role === 'ambulance_driver') {
+          profileData = { ...profileData,
+            aadharNo: (form.elements.namedItem('aadhar-no') as HTMLInputElement)?.value || '',
+            licenceNo: (form.elements.namedItem('licence-no') as HTMLInputElement)?.value || '',
+            vehiclePlate: (form.elements.namedItem('vehicle-no') as HTMLInputElement)?.value || '',
+            assignedHospital: (form.elements.namedItem('hospital-name') as HTMLInputElement)?.value || '',
+            hospitalAddress: (form.elements.namedItem('hospital-address') as HTMLInputElement)?.value || ''
+          };
+        } else if (role === 'donor') {
+          let photoIdUrl = '';
+          const fileInput = form.elements.namedItem('photo-id') as HTMLInputElement;
+          if (fileInput && fileInput.files && fileInput.files[0] && storage) {
+            try {
+              const file = fileInput.files[0];
+              const fileRef = ref(storage, `photo_ids/${cred.user.uid}_${file.name}`);
+              
+              // Upload with 8 second timeout to prevent infinite hangs if Firebase Storage isn't configured
+              const uploadPromise = uploadBytes(fileRef, file).then(() => getDownloadURL(fileRef));
+              const timeoutPromise = new Promise<string>((_, reject) => setTimeout(() => reject(new Error("Storage upload timed out. Ensure Firebase Storage is configured.")), 8000));
+              
+              photoIdUrl = await Promise.race([uploadPromise, timeoutPromise]);
+            } catch (storageErr: any) {
+              console.error("Storage upload error:", storageErr);
+              // We'll just continue saving the profile without the photo if storage fails
+            }
+          }
+
+          profileData = { ...profileData, pincode,
+            address: (form.elements.namedItem('address') as HTMLInputElement)?.value || '',
+            weight: (form.elements.namedItem('weight') as HTMLInputElement)?.value || '',
+            healthInfo: (form.elements.namedItem('health-info') as HTMLInputElement)?.value || '',
+            photoId: photoIdUrl || '',
+            hemoglobinLevel: (form.elements.namedItem('hemoglobin') as HTMLInputElement)?.value || '',
+            lastDonation: (form.elements.namedItem('last-donation') as HTMLInputElement)?.value || ''
+          };
+        }
+
+        await createUserProfile(cred.user.uid, profileData);
         
         setSuccess('Account created successfully!');
       }
       
       await new Promise(r => setTimeout(r, 800));
-      await refreshProfile();
-      
-      router.push('/profile');
+      const updatedProfile = await refreshProfile();
+      // Use profile role from Firestore (handles hospital users signing in via public login)
+      const profileRole = (updatedProfile as any)?.role ?? role;
+      if (profileRole === 'hospital') {
+        router.push('/hospital/dashboard');
+      } else {
+        router.push('/');
+      }
     } catch (err: any) {
-      setError(friendlyError(err.code));
+      console.error("Login/Signup Error:", err);
+      setError(err.code ? friendlyError(err.code) : err.message || 'An unknown error occurred');
       setLoading(false);
     }
   };
@@ -135,7 +220,12 @@ function LoginInner() {
       setSuccess('Logged in successfully with Google!');
       await new Promise(r => setTimeout(r, 800));
       await refreshProfile();
-      router.push('/profile');
+      
+      if (role === 'hospital') {
+        router.push('/hospital/dashboard');
+      } else {
+        router.push('/');
+      }
     } catch (err: any) {
       setError(friendlyError(err.code));
       setLoading(false);
@@ -160,7 +250,7 @@ function LoginInner() {
     <div className="w-full lg:w-1/2 bg-gradient-to-br from-gray-50 via-white to-red-50/20 flex items-start lg:items-center justify-center p-5 sm:p-10 relative overflow-y-auto">
       <div className="absolute top-[-15%] right-[-10%] w-[50%] h-[50%] bg-red-100 opacity-30 rounded-full blur-[100px] pointer-events-none" />
       <div className="lg:hidden absolute top-0 left-0 right-0 h-36 overflow-hidden z-0">
-        <Image src="/hero-ambulance.png" alt="Emergency" fill className="object-cover" priority />
+        <Image src="/hero-ambulance.png" alt="Emergency" fill sizes="50vw" className="object-cover" priority />
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-gray-50/80 to-gray-50" />
       </div>
 
@@ -170,6 +260,15 @@ function LoginInner() {
         <div className="flex items-center gap-2 mb-6">
           <div className="w-9 h-9 bg-gradient-to-br from-red-500 to-red-600 text-white rounded-xl flex items-center justify-center font-black text-lg shadow-md">A</div>
           <span className="text-lg font-extrabold tracking-tight">AeroCare</span>
+        </div>
+
+        {/* Portal switcher */}
+        <div className="flex bg-gray-100/80 rounded-2xl p-1.5 mb-4 relative">
+          <motion.div className="absolute top-1.5 bottom-1.5 bg-white rounded-xl shadow-sm" initial={false}
+            animate={{ left: '6px', width: 'calc(50% - 6px)' }}
+            transition={{ type: 'spring', bounce: 0.18, duration: 0.55 }} />
+          <button type="button" className={`flex-1 py-3 text-sm font-bold rounded-xl relative z-10 transition-colors text-black`}>Public App</button>
+          <button type="button" onClick={() => router.push('/hospital')} className={`flex-1 py-3 text-sm font-bold rounded-xl relative z-10 transition-colors text-gray-400 hover:text-black`}>Hospital Portal</button>
         </div>
 
         {/* Tab switcher */}
@@ -223,7 +322,69 @@ function LoginInner() {
               )}
 
               {!isLogin && (
-                <Field id="full-name" label={role === 'hospital' ? 'Hospital Name' : 'Full Name'} icon={role === 'hospital' ? Building2 : UserCircle} placeholder={role === 'hospital' ? 'e.g. Bombay Hospital' : 'e.g. Anushka Sharma'} />
+                <div className="max-h-[30vh] md:max-h-[40vh] overflow-y-auto pr-2 custom-scrollbar">
+                  {role === 'civilian' && (
+                    <>
+                      <Field id="full-name" label="Full Name" icon={UserCircle} placeholder="e.g. Anushka Sharma" />
+                      <div className="grid grid-cols-2 gap-3">
+                        <Field id="phone" label="Contact No." icon={UserCircle} placeholder="Phone" />
+                        <Field id="age" label="Age" icon={UserCircle} placeholder="Age" />
+                      </div>
+                      <Field id="emergency-contact" label="Emergency Contact No." icon={UserCircle} placeholder="Emergency Phone" required={false} />
+                      <Field id="medical-history" label="Any Medical History" icon={UserCircle} placeholder="History" required={false} />
+                      <Field id="current-medicine" label="Current Medicine" icon={UserCircle} placeholder="Medicine" required={false} />
+                      <div className="grid grid-cols-2 gap-3">
+                        <Field id="state" label="State" icon={MapPin} type="select" placeholder="Select State" options={INDIAN_STATES} value={selState} onChange={(e: any) => { setSelState(e.target.value); setSelCity(''); }} />
+                        <Field id="city" label="City" icon={MapPin} type="select" placeholder="Select City" options={selState && CITY_MAP[selState] ? CITY_MAP[selState] : []} value={selCity} onChange={(e: any) => setSelCity(e.target.value)} disabled={!selState} />
+                      </div>
+                      <Field id="pincode" label="Pincode" icon={MapPin} placeholder="Pincode" />
+                    </>
+                  )}
+                  {role === 'ambulance_driver' && (
+                    <>
+                      <Field id="full-name" label="Full Name" icon={UserCircle} placeholder="Driver Name" />
+                      <div className="grid grid-cols-2 gap-3">
+                        <Field id="aadhar-no" label="Aadhar No." icon={UserCircle} placeholder="Aadhar" />
+                        <Field id="licence-no" label="Licence No." icon={UserCircle} placeholder="Licence" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <Field id="vehicle-no" label="Vehicle No." icon={UserCircle} placeholder="Vehicle Plate" />
+                        <Field id="phone" label="Contact No." icon={UserCircle} placeholder="Phone" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <Field id="state" label="State" icon={MapPin} type="select" placeholder="Select State" options={INDIAN_STATES} value={selState} onChange={(e: any) => { setSelState(e.target.value); setSelCity(''); }} />
+                        <Field id="city" label="City" icon={MapPin} type="select" placeholder="Select City" options={selState && CITY_MAP[selState] ? CITY_MAP[selState] : []} value={selCity} onChange={(e: any) => setSelCity(e.target.value)} disabled={!selState} />
+                      </div>
+                      <Field id="hospital-name" label="Hospital Name" icon={Building2} placeholder="Hospital Name" required={false} />
+                      <Field id="hospital-address" label="Hospital Address" icon={MapPin} placeholder="Hospital Address" required={false} />
+                    </>
+                  )}
+                  {role === 'donor' && (
+                    <>
+                      <Field id="full-name" label="Full Name" icon={UserCircle} placeholder="Donor Name" />
+                      <div className="grid grid-cols-2 gap-3">
+                        <Field id="phone" label="Contact No." icon={UserCircle} placeholder="Phone" />
+                        <Field id="age" label="Age" icon={UserCircle} placeholder="Age" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <Field id="state" label="State" icon={MapPin} type="select" placeholder="Select State" options={INDIAN_STATES} value={selState} onChange={(e: any) => { setSelState(e.target.value); setSelCity(''); }} />
+                        <Field id="city" label="City" icon={MapPin} type="select" placeholder="Select City" options={selState && CITY_MAP[selState] ? CITY_MAP[selState] : []} value={selCity} onChange={(e: any) => setSelCity(e.target.value)} disabled={!selState} />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <Field id="pincode" label="Pincode" icon={MapPin} placeholder="Pincode" />
+                        <Field id="blood-group" label="Blood Group" icon={Droplet} type="select" placeholder="Select" options={['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']} required={false} />
+                      </div>
+                      <Field id="address" label="Address" icon={MapPin} placeholder="Address" required={false} />
+                      <div className="grid grid-cols-2 gap-3">
+                        <Field id="weight" label="Weight (kg)" icon={UserCircle} placeholder="Weight" required={false} />
+                        <Field id="hemoglobin" label="Hemoglobin Level" icon={UserCircle} placeholder="Level" required={false} />
+                      </div>
+                      <Field id="health-info" label="Health Info" icon={UserCircle} placeholder="Health Info" required={false} />
+                      <Field id="last-donation" label="Last Donation Date" icon={UserCircle} placeholder="YYYY-MM-DD" required={false} />
+                      <Field id="photo-id" label="Photo ID" icon={UserCircle} type="file" required={false} />
+                    </>
+                  )}
+                </div>
               )}
 
               <Field id="email" label="Email Address" icon={Mail} type="email"
@@ -284,7 +445,7 @@ export default function LoginClient() {
     <div className="flex-1 w-full bg-white flex relative overflow-hidden h-[calc(100vh-60px)] md:h-[calc(100vh-68px)]">
       {/* ── Left Hero ── */}
       <div className="hidden lg:flex w-1/2 relative flex-col justify-end overflow-hidden">
-        <Image src="/hero-ambulance.png" alt="Emergency response" fill className="object-cover" priority />
+        <Image src="/hero-ambulance.png" alt="Emergency response" fill sizes="50vw" className="object-cover" priority />
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-black/20" />
         <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2">
           <motion.div animate={{ scale: [1, 2.8], opacity: [0.4, 0] }} transition={{ duration: 2.5, repeat: Infinity, ease: 'easeOut' }} className="absolute w-12 h-12 rounded-full border-2 border-red-500 -translate-x-1/2 -translate-y-1/2" />

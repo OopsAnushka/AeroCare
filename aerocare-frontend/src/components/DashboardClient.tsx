@@ -5,7 +5,7 @@ import FloatingInterface from './FloatingInterface';
 
 const MapView = dynamic(() => import('./MapView'), { ssr: false });
 
-export type TabId = 'dispatch' | 'radar' | 'hospitals' | 'blood' | 'cpr';
+export type TabId = 'dispatch' | 'hospitals' | 'blood' | 'cpr';
 
 export interface Volunteer {
   id: number;

@@ -61,6 +61,17 @@ export default function DispatchTab({ setPickupLocation, dispatched, setDispatch
       // Backend called successfully (or mock fallback returned)
       if (res.data && setDispatchData) {
         setDispatchData(res.data);
+        
+        // Broadcast SOS alert to Ambulance Drivers globally
+        localStorage.setItem('global_alert', JSON.stringify({
+          type: 'SOS',
+          urgency: 'CRITICAL PRIORITY',
+          location: `Lat: ${userLocation[0].toFixed(4)}, Lon: ${userLocation[1].toFixed(4)}`,
+          distance: '~' + (Math.random() * 5 + 1).toFixed(1) + ' km',
+          details: 'Patient requires immediate ' + unitType + ' medical assistance. ETA ' + res.data.eta_mins + ' mins from ' + res.data.hospital_name + '.',
+          timestamp: Date.now()
+        }));
+        window.dispatchEvent(new Event('global_alert_local'));
       }
       setDispatched(true);
     } catch (err) {

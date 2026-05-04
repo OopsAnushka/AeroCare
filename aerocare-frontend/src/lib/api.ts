@@ -1,42 +1,62 @@
-// src/lib/api.ts
+import { db } from '@/lib/firebase';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 
 const API_BASE_URL = '/api';
 
+function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371; // Radius of the Earth in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
 /**
- * Fetch nearby hospitals from the backend.
- * Falls back to mock data if the backend is unreachable.
+ * Fetch nearby hospitals from Firestore.
  */
 export async function fetchNearbyHospitals(lat: number, lon: number) {
   try {
-    const res = await fetch(`${API_BASE_URL}/hospitals/nearest`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ latitude: lat, longitude: lon, resourceType: 'icu_bed' }),
+    if (!db) throw new Error('Firestore not initialized');
+    
+    const hospitalsRef = collection(db, 'users');
+    const q = query(hospitalsRef, where('role', '==', 'hospital'));
+    const snapshot = await getDocs(q);
+    
+    const hospitals: any[] = [];
+    
+    snapshot.forEach((doc) => {
+      const data = doc.data();
+      // Simple mock for coordinates since hospitals might not have them in their profile yet
+      // For a real app, we'd use geocoding on the address or store lat/lng in the profile
+      const hLat = data.lat ?? (lat + (Math.random() - 0.5) * 0.1); 
+      const hLon = data.lng ?? (lon + (Math.random() - 0.5) * 0.1);
+      
+      const distance = haversineDistance(lat, lon, hLat, hLon);
+      
+      if (distance <= 50) { // Within 50km
+        hospitals.push({
+          id: doc.id,
+          name: data.hospitalName || 'Unknown Hospital',
+          beds: parseInt(data.availableIcuBeds || data.availableBeds || '0', 10),
+          distance: `${distance.toFixed(1)} km`,
+          pos: [hLat, hLon],
+        });
+      }
     });
     
-    if (!res.ok) {
-      if (res.status === 404) return [];
-      throw new Error('Failed to fetch hospitals');
-    }
+    // Sort by distance
+    hospitals.sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
     
-    const data = await res.json();
-    
-    // Map backend response to frontend format
-    // Assuming backend might return a single hospital or an array
-    const hospitals = Array.isArray(data) ? data : [data];
-    
-    return hospitals.map((h: any, i: number) => ({
-      id: h.id || i,
-      name: h.name || h.hospital_name || 'Unknown Hospital',
-      beds: h.available_beds || h.icu_beds || Math.floor(Math.random() * 10) + 1,
-      distance: h.distance_km ? `${parseFloat(h.distance_km).toFixed(1)} km` : `${(Math.random() * 5 + 1).toFixed(1)} km`,
-      pos: [parseFloat(h.latitude || lat + 0.01), parseFloat(h.longitude || lon + 0.01)] as [number, number],
-    }));
+    return hospitals;
   } catch (error: any) {
-    console.warn('Backend error or no hospitals found in database:', error.message);
-    return []; // Return empty array so user knows database is empty
+    console.warn('Failed to fetch hospitals from Firestore:', error.message);
+    return [];
   }
 }
+
 
 /**
  * Fetch nearby Samaritan volunteers from the backend.
@@ -73,12 +93,12 @@ export async function fetchNearbyVolunteers(lat: number, lon: number) {
 /**
  * Fetch nearby blood donors from the backend.
  */
-export async function fetchNearbyDonors(lat: number, lon: number, bloodGroup: string) {
+export async function fetchNearbyDonors(lat: number, lon: number, bloodGroup: string, radiusKm: number = 10) {
   try {
     const res = await fetch(`${API_BASE_URL}/blood/request`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ latitude: lat, longitude: lon, bloodGroup, radiusKm: 10 }),
+      body: JSON.stringify({ latitude: lat, longitude: lon, bloodGroup, radiusKm }),
     });
     
     if (!res.ok) {

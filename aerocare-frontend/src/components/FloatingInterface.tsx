@@ -11,7 +11,6 @@ import LiveTracker from './LiveTracker';
 
 const TABS: { id: TabId; icon: typeof Ambulance; label: string; gradient: string }[] = [
   { id: 'dispatch', icon: Ambulance, label: 'SOS', gradient: 'from-red-500 to-rose-600' },
-  { id: 'radar', icon: Radar, label: 'Radar', gradient: 'from-emerald-500 to-teal-600' },
   { id: 'hospitals', icon: Hospital, label: 'Hospitals', gradient: 'from-blue-500 to-indigo-600' },
   { id: 'blood', icon: Droplet, label: 'Blood', gradient: 'from-pink-500 to-rose-600' },
   { id: 'cpr', icon: HeartPulse, label: 'CPR', gradient: 'from-amber-500 to-orange-600' },
@@ -104,7 +103,6 @@ export default function FloatingInterface({
                   setDispatchData={setDispatchData}
                 />
               )}
-              {activeTab === 'radar' && <RadarTab volunteers={volunteers} />}
               {activeTab === 'hospitals' && (
                 <HospitalsTab
                   userLocation={userLocation}

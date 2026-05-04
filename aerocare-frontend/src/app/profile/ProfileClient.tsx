@@ -1,7 +1,7 @@
 'use client';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useRef } from 'react';
-import { QrCode, Droplets, AlertCircle, Pill, PhoneCall, ChevronLeft, Share2, LogIn, LogOut, Building2, UserCircle, MapPin, Hash, BedDouble, Ambulance, Calendar, Heart, Weight, Save, Edit3 } from 'lucide-react';
+import { QrCode, Droplets, AlertCircle, Pill, PhoneCall, ChevronLeft, Share2, LogIn, LogOut, Building2, UserCircle, MapPin, Hash, BedDouble, Ambulance, Calendar, Heart, Weight, Save, Edit3, Plus, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
@@ -12,6 +12,8 @@ export default function ProfileClient() {
   const [autoShare, setAutoShare] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [addingAmbulance, setAddingAmbulance] = useState(false);
+  const [newAmb, setNewAmb] = useState({ plate: '', type: 'BLS', driver: '' });
   const formRef = useRef<HTMLFormElement>(null);
   
   const { user, profile, signOut, refreshProfile } = useAuth();
@@ -46,26 +48,28 @@ export default function ProfileClient() {
     const form = formRef.current;
     const get = (name: string) => (form.elements.namedItem(name) as HTMLInputElement)?.value || '';
     
-    let updatedProfile: any = { role: profile.role, email: profile.email };
+    let updatedProfile: any = { ...profile };
     
     if (profile.role === 'civilian') {
       updatedProfile = { ...updatedProfile,
-        fullName: get('fullName'), phone: get('phone'), dob: get('dob'),
-        bloodType: get('bloodType'), allergies: get('allergies'),
-        medications: get('medications'), emergencyContactName: get('emergencyContactName'),
-        emergencyContactPhone: get('emergencyContactPhone')
+        fullName: get('fullName'), phone: get('phone'), age: get('age'),
+        bloodType: get('bloodType'), medicalHistory: get('medicalHistory'),
+        currentMedicine: get('currentMedicine'), emergencyContactName: get('emergencyContactName'),
+        emergencyContactPhone: get('emergencyContactPhone'),
+        city: get('city'), state: get('state'), pincode: get('pincode')
       };
     } else if (profile.role === 'donor') {
       updatedProfile = { ...updatedProfile,
-        fullName: get('fullName'), phone: get('phone'), dob: get('dob'),
-        bloodType: get('bloodType'), weight: get('weight'),
-        lastDonation: get('lastDonation'), conditions: get('conditions'), address: get('address')
+        fullName: get('fullName'), phone: get('phone'), age: get('age'),
+        bloodType: get('bloodType'), weight: get('weight'), hemoglobinLevel: get('hemoglobinLevel'),
+        lastDonation: get('lastDonation'), healthInfo: get('healthInfo'), address: get('address'),
+        city: get('city'), state: get('state'), pincode: get('pincode')
       };
     } else if (profile.role === 'hospital') {
       updatedProfile = { ...updatedProfile,
-        hospitalName: get('hospitalName'), registrationNumber: get('registrationNumber'), phone: get('phone'),
+        hospitalName: get('hospitalName'), phone: get('phone'),
         address: get('address'), icuBeds: get('icuBeds'), ambulances: get('ambulances'),
-        contactPerson: get('contactPerson'), contactRole: get('contactRole')
+        contactPerson: get('contactPerson')
       };
     }
 
@@ -77,6 +81,32 @@ export default function ProfileClient() {
       console.error(err);
     }
     setLoading(false);
+  };
+
+  const handleAddAmbulance = async () => {
+    if (!newAmb.plate) return;
+    const currentAmbs = (profile as HospitalProfile).ambulances_list || [];
+    const updated = [...currentAmbs, newAmb];
+    
+    try {
+      await saveUserProfile(user.uid, { ...profile, ambulances_list: updated } as any);
+      await refreshProfile();
+      setAddingAmbulance(false);
+      setNewAmb({ plate: '', type: 'BLS', driver: '' });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleRemoveAmbulance = async (idx: number) => {
+    const currentAmbs = [...((profile as HospitalProfile).ambulances_list || [])];
+    currentAmbs.splice(idx, 1);
+    try {
+      await saveUserProfile(user.uid, { ...profile, ambulances_list: currentAmbs } as any);
+      await refreshProfile();
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const role = profile.role;
@@ -117,23 +147,44 @@ export default function ProfileClient() {
             {role === 'civilian' && (
               <>
                 <EditField name="fullName" label="Full Name" defaultValue={(profile as CivilianProfile).fullName} required />
+                <div className="grid grid-cols-2 gap-3">
+                  <EditField name="phone" label="Phone" defaultValue={(profile as CivilianProfile).phone} type="tel" />
+                  <EditField name="age" label="Age" defaultValue={(profile as CivilianProfile).age} />
+                </div>
                 <EditField name="bloodType" label="Blood Type" defaultValue={(profile as CivilianProfile).bloodType} />
-                <EditField name="allergies" label="Allergies (comma separated)" defaultValue={(profile as CivilianProfile).allergies} />
-                <EditField name="medications" label="Medications (comma separated)" defaultValue={(profile as CivilianProfile).medications} />
-                <EditField name="phone" label="Phone Number" defaultValue={(profile as CivilianProfile).phone} type="tel" />
-                <EditField name="emergencyContactName" label="Emergency Contact Name" defaultValue={(profile as CivilianProfile).emergencyContactName} />
-                <EditField name="emergencyContactPhone" label="Emergency Contact Phone" defaultValue={(profile as CivilianProfile).emergencyContactPhone} type="tel" />
+                <EditField name="medicalHistory" label="Medical History" defaultValue={(profile as CivilianProfile).medicalHistory} />
+                <EditField name="currentMedicine" label="Current Medicine" defaultValue={(profile as CivilianProfile).currentMedicine} />
+                <div className="grid grid-cols-2 gap-3">
+                  <EditField name="emergencyContactName" label="Emergency Contact Name" defaultValue={(profile as CivilianProfile).emergencyContactName} />
+                  <EditField name="emergencyContactPhone" label="Emergency Contact Phone" defaultValue={(profile as CivilianProfile).emergencyContactPhone} type="tel" />
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <EditField name="city" label="City" defaultValue={(profile as CivilianProfile).city} />
+                  <EditField name="state" label="State" defaultValue={(profile as CivilianProfile).state} />
+                  <EditField name="pincode" label="Pincode" defaultValue={(profile as CivilianProfile).pincode} />
+                </div>
               </>
             )}
             {role === 'donor' && (
               <>
                 <EditField name="fullName" label="Full Name" defaultValue={(profile as DonorProfile).fullName} required />
+                <div className="grid grid-cols-2 gap-3">
+                  <EditField name="phone" label="Phone" defaultValue={(profile as DonorProfile).phone} type="tel" />
+                  <EditField name="age" label="Age" defaultValue={(profile as DonorProfile).age} />
+                </div>
                 <EditField name="bloodType" label="Blood Type" defaultValue={(profile as DonorProfile).bloodType} />
-                <EditField name="weight" label="Weight (kg)" defaultValue={(profile as DonorProfile).weight} type="number" />
+                <div className="grid grid-cols-2 gap-3">
+                  <EditField name="weight" label="Weight (kg)" defaultValue={(profile as DonorProfile).weight} type="number" />
+                  <EditField name="hemoglobinLevel" label="Hemoglobin" defaultValue={(profile as DonorProfile).hemoglobinLevel} />
+                </div>
+                <EditField name="healthInfo" label="Health Info" defaultValue={(profile as DonorProfile).healthInfo} />
                 <EditField name="lastDonation" label="Last Donation Date" defaultValue={(profile as DonorProfile).lastDonation} type="date" />
-                <EditField name="conditions" label="Medical Conditions" defaultValue={(profile as DonorProfile).conditions} />
-                <EditField name="phone" label="Phone Number" defaultValue={(profile as DonorProfile).phone} type="tel" />
                 <EditField name="address" label="Address" defaultValue={(profile as DonorProfile).address} />
+                <div className="grid grid-cols-3 gap-2">
+                  <EditField name="city" label="City" defaultValue={(profile as DonorProfile).city} />
+                  <EditField name="state" label="State" defaultValue={(profile as DonorProfile).state} />
+                  <EditField name="pincode" label="Pincode" defaultValue={(profile as DonorProfile).pincode} />
+                </div>
               </>
             )}
             {role === 'hospital' && (
@@ -164,14 +215,14 @@ export default function ProfileClient() {
                     <InfoCard icon={Droplets} title="Blood Type" value={(profile as CivilianProfile).bloodType || 'N/A'} color="text-red-600" bgColor="bg-red-50" iconColor="text-red-500" />
                     <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100">
                       <div className="w-9 h-9 bg-amber-50 rounded-full flex items-center justify-center text-amber-500 mb-3"><AlertCircle className="w-4 h-4" /></div>
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Allergies</p>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Medical History</p>
                       <h3 className="text-base font-bold mt-1 leading-tight">
-                        {((profile as CivilianProfile).allergies ? (profile as CivilianProfile).allergies.split(',').map(s => s.trim()) : ['None reported']).map((a, i) => <span key={i} className="block">{a}</span>)}
+                        {((profile as CivilianProfile).medicalHistory || '').split(',').map(s => s.trim()).filter(Boolean).length > 0 ? ((profile as CivilianProfile).medicalHistory || '').split(',').map(s => s.trim()).filter(Boolean).map((a, i) => <span key={i} className="block">{a}</span>) : <span className="block">None reported</span>}
                       </h3>
                     </div>
                   </div>
-                  <ListCard icon={Pill} title="Current Medications" items={((profile as CivilianProfile).medications ? (profile as CivilianProfile).medications.split(',').map(s => s.trim()) : [])} emptyText="No medications reported" />
-                  <ContactCard name={(profile as CivilianProfile).emergencyContactName || 'Not set'} phone={(profile as CivilianProfile).emergencyContactPhone} />
+                  <ListCard icon={Pill} title="Current Medications" items={((profile as CivilianProfile).currentMedicine || '').split(',').map(s => s.trim()).filter(Boolean)} emptyText="No medications reported" />
+                  <ContactCard name={(profile as CivilianProfile).emergencyContactName || 'Not set'} phone={(profile as CivilianProfile).emergencyContactPhone || ''} />
                 </>
               )}
 
@@ -247,6 +298,58 @@ export default function ProfileClient() {
                         <a href={`tel:${(profile as HospitalProfile).phone}`} className="w-9 h-9 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center transition-colors">
                           <PhoneCall className="w-4 h-4 fill-current" />
                         </a>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="px-5 py-3.5 border-b border-gray-50 flex items-center justify-between bg-gray-50/50">
+                      <div className="flex items-center gap-2">
+                        <Ambulance className="w-4 h-4 text-gray-400" />
+                        <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Registered Ambulance Fleet</h3>
+                      </div>
+                      <button onClick={() => setAddingAmbulance(!addingAmbulance)} className="w-7 h-7 bg-white border border-gray-200 rounded-full flex items-center justify-center hover:border-black transition-colors">
+                        <Plus className="w-4 h-4" />
+                      </button>
+                    </div>
+                    
+                    <div className="p-5 flex flex-col gap-3">
+                      {addingAmbulance && (
+                        <div className="bg-gray-50 p-4 rounded-2xl border border-gray-200 flex flex-col gap-3 mb-2">
+                          <input type="text" placeholder="License Plate (e.g. MP09-AB-1234)" value={newAmb.plate} onChange={(e) => setNewAmb({...newAmb, plate: e.target.value})} className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2 text-sm font-medium focus:border-red-500 focus:outline-none" />
+                          <div className="flex gap-2">
+                            <select value={newAmb.type} onChange={(e) => setNewAmb({...newAmb, type: e.target.value})} className="bg-white border border-gray-200 rounded-xl px-4 py-2 text-sm font-medium focus:outline-none">
+                              <option value="BLS">BLS Unit</option>
+                              <option value="ALS">ALS Unit</option>
+                            </select>
+                            <input type="text" placeholder="Driver Name" value={newAmb.driver} onChange={(e) => setNewAmb({...newAmb, driver: e.target.value})} className="flex-1 bg-white border border-gray-200 rounded-xl px-4 py-2 text-sm font-medium focus:border-red-500 focus:outline-none" />
+                          </div>
+                          <button onClick={handleAddAmbulance} className="bg-black text-white py-2 rounded-xl text-sm font-bold mt-1">Save Vehicle</button>
+                        </div>
+                      )}
+
+                      {((profile as HospitalProfile).ambulances_list || []).length > 0 ? (
+                        ((profile as HospitalProfile).ambulances_list || []).map((amb: any, i: number) => (
+                          <div key={i} className="flex items-center justify-between p-3 border border-gray-100 rounded-xl bg-gray-50/50">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-red-50 rounded-xl flex items-center justify-center text-red-500 shrink-0">
+                                <Ambulance className="w-5 h-5" />
+                              </div>
+                              <div>
+                                <h4 className="font-bold text-sm flex items-center gap-2">
+                                  {amb.plate} 
+                                  <span className={`text-[9px] px-1.5 py-0.5 rounded-md text-white ${amb.type === 'ALS' ? 'bg-red-500' : 'bg-blue-500'}`}>{amb.type}</span>
+                                </h4>
+                                <p className="text-xs text-gray-500 font-medium">Driver: {amb.driver || 'Unassigned'}</p>
+                              </div>
+                            </div>
+                            <button onClick={() => handleRemoveAmbulance(i)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-sm text-gray-400 font-medium py-2">No individual vehicles registered yet.</p>
                       )}
                     </div>
                   </div>

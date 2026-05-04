@@ -33,6 +33,7 @@ export default function Navbar() {
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
+  // ── All hooks must be declared before any conditional return ──
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
     window.addEventListener('scroll', onScroll, { passive: true });
@@ -84,14 +85,28 @@ export default function Navbar() {
     router.push('/emergency?tab=hospitals');
   };
 
+  // Hide the public navbar on the hospital dashboard (after all hooks)
+  if (pathname?.startsWith('/hospital/dashboard') || pathname?.startsWith('/hospital/dashboard')) {
+    return null;
+  }
+
   return (
     <nav className={`fixed top-0 left-0 w-full z-[1000] transition-all duration-300 ${scrolled ? 'bg-black/95 backdrop-blur-xl shadow-lg' : 'bg-black'}`}>
       <div className="max-w-[1400px] mx-auto px-4 md:px-8 h-[60px] md:h-[68px] flex items-center justify-between gap-3">
-        {/* Logo */}
-        <Link href="/" className="flex items-center gap-2 group shrink-0">
-          <div className="w-8 h-8 bg-gradient-to-br from-red-500 to-red-600 text-white rounded-lg flex items-center justify-center font-black text-sm shadow-md group-hover:shadow-red-500/40 transition-shadow">A</div>
-          <span className="text-base font-extrabold tracking-tight text-white hidden sm:inline">AeroCare</span>
-        </Link>
+        {/* Logo & Portal Switcher */}
+        <div className="flex items-center gap-6 shrink-0">
+          <Link href="/" className="flex items-center gap-2 group">
+            <div className="w-8 h-8 bg-gradient-to-br from-red-500 to-red-600 text-white rounded-lg flex items-center justify-center font-black text-sm shadow-md group-hover:shadow-red-500/40 transition-shadow">A</div>
+            <span className="text-base font-extrabold tracking-tight text-white hidden sm:inline">AeroCare</span>
+          </Link>
+
+          {profile?.role === 'hospital' && (
+            <div className="hidden md:flex items-center bg-white/10 p-1 rounded-full border border-white/10">
+              <Link href="/" className={`px-3 py-1 text-[10px] font-extrabold tracking-wider uppercase rounded-full transition-colors ${!pathname.startsWith('/hospital') ? 'bg-white text-black shadow-sm' : 'text-gray-400 hover:text-white'}`}>Public</Link>
+              <Link href="/hospital" className={`px-3 py-1 text-[10px] font-extrabold tracking-wider uppercase rounded-full transition-colors ${pathname.startsWith('/hospital') ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'text-gray-400 hover:text-white'}`}>Hospital</Link>
+            </div>
+          )}
+        </div>
 
         {/* Desktop links */}
         <div className="hidden lg:flex items-center gap-0.5 bg-white/[0.06] rounded-full p-1 border border-white/[0.06]">
@@ -216,6 +231,12 @@ export default function Navbar() {
         {mobileOpen && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.25 }} className="lg:hidden bg-black/95 backdrop-blur-xl border-t border-white/10 overflow-hidden">
             <div className="px-4 py-4 flex flex-col gap-1">
+              {profile?.role === 'hospital' && (
+                <div className="flex bg-white/10 p-1 rounded-xl mb-3">
+                  <Link href="/" onClick={() => setMobileOpen(false)} className={`flex-1 text-center py-2 text-xs font-bold rounded-lg ${!pathname.startsWith('/hospital') ? 'bg-white text-black' : 'text-gray-400'}`}>Public App</Link>
+                  <Link href="/hospital" onClick={() => setMobileOpen(false)} className={`flex-1 text-center py-2 text-xs font-bold rounded-lg ${pathname.startsWith('/hospital') ? 'bg-emerald-500 text-white' : 'text-gray-400'}`}>Hospital Portal</Link>
+                </div>
+              )}
               {NAV_LINKS.map((link) => (
                 <Link key={link.href} href={link.href} onClick={() => setMobileOpen(false)} className={`py-3 px-4 rounded-xl font-semibold text-sm transition-colors ${pathname === link.href ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>{link.label}</Link>
               ))}
