@@ -175,7 +175,9 @@ export default function AmbulanceTab({ hp, userId }: {
                       className="p-1.5 rounded-lg bg-white/5 hover:bg-teal-500/10 text-gray-600 hover:text-teal-400 transition-all">
                       <RefreshCw className="w-3 h-3" />
                     </button>
-                    {unit.lat && <MapPin className="w-3 h-3 text-teal-400" title={`${unit.lat?.toFixed(4)}, ${unit.lng?.toFixed(4)}`} />}
+                    {unit.lat && <span title={`${unit.lat?.toFixed(4)}, ${unit.lng}`}>
+  <MapPin className="w-3 h-3 text-teal-400" />
+</span>}
                   </div>
                 </div>
               );
