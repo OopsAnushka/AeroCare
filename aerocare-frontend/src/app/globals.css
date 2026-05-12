@@ -1,4 +1,4 @@
-@import "tailwindcss";
+﻿@import "tailwindcss";
 @import "leaflet/dist/leaflet.css";
 
 /* ───────── Design Tokens ───────── */
@@ -6,7 +6,7 @@
   --bg: #ffffff;
   --fg: #000000;
   --accent: #ef4444;
-  --accent-soft: rgba(239, 68, 68, 0.08);
+  --accent-soft: rgba(239,68,68,0.08);
   --card: #ffffff;
   --muted: #6b7280;
   --border: #f3f4f6;
@@ -16,7 +16,7 @@
 @theme inline {
   --color-background: var(--bg);
   --color-foreground: var(--fg);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-outfit), var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
@@ -31,11 +31,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-::selection {
-  background-color: rgba(239, 68, 68, 0.15);
-  color: inherit;
-}
-
+::selection { background-color: rgba(239,68,68,0.15); color: inherit; }
 input:focus, select:focus, textarea:focus { outline: none; }
 
 /* ───────── Leaflet ───────── */
@@ -45,39 +41,34 @@ input:focus, select:focus, textarea:focus { outline: none; }
 .hide-scrollbar::-webkit-scrollbar { display: none; }
 .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-/* Dark custom scrollbar for hospital dashboard */
+/* Hospital dashboard scrollbar */
 .custom-scrollbar::-webkit-scrollbar { width: 4px; }
 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
 .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 99px; }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
 .custom-scrollbar { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.08) transparent; }
 
+/* Focus ring */
+.input-ring { transition: border-color 0.2s, box-shadow 0.2s; }
+.input-ring:focus-within { border-color: var(--accent) !important; box-shadow: 0 0 0 3px var(--accent-soft); }
 
-/* Focus ring for inputs */
-.input-ring {
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-.input-ring:focus-within {
-  border-color: var(--accent) !important;
-  box-shadow: 0 0 0 3px var(--accent-soft);
-}
-
-/* Glow button pulse */
+/* Glow pulse */
 @keyframes glow-pulse {
   0%, 100% { box-shadow: 0 0 15px rgba(239,68,68,0.3); }
-  50% { box-shadow: 0 0 30px rgba(239,68,68,0.5); }
+  50%       { box-shadow: 0 0 30px rgba(239,68,68,0.5); }
 }
 .glow-pulse { animation: glow-pulse 2s infinite; }
 
-/* ───────── Mobile / PWA ───────── */
-html, body { height: 100%; }
-
-/* Use dvh for mobile browsers with dynamic toolbar */
-@supports (height: 100dvh) {
-  html, body { height: 100dvh; }
+/* Live ticker */
+@keyframes ticker {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-33.333%); }
 }
 
-/* Safe area for notched phones (iPhone etc) */
+/* ───────── Mobile / PWA ───────── */
+html, body { height: 100%; }
+@supports (height: 100dvh) { html, body { height: 100dvh; } }
+
 body {
   padding-top: env(safe-area-inset-top);
   padding-bottom: env(safe-area-inset-bottom);
@@ -85,10 +76,7 @@ body {
   padding-right: env(safe-area-inset-right);
 }
 
-/* PWA standalone mode */
-@media (display-mode: standalone) {
-  body { overscroll-behavior: none; }
-}
+@media (display-mode: standalone) { body { overscroll-behavior: none; } }
 
 /* Touch optimization */
 button, a, [role="button"] {
@@ -96,5 +84,9 @@ button, a, [role="button"] {
   touch-action: manipulation;
 }
 
-/* Prevent text selection on interactive elements */
 nav, .no-select { -webkit-user-select: none; user-select: none; }
+
+/* ───────── Emergency panel mobile ───────── */
+@media (max-width: 767px) {
+  .emergency-panel { max-height: 82dvh; }
+}
